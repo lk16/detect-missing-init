@@ -1,0 +1,5 @@
+- id: detect-mising-init
+  name: Detect missing __init__.py
+  description: This hook detects and optionally creates __init__.py files
+  entry: detect-missing-init
+  language: python
