@@ -1,4 +1,6 @@
+#!/usr/bin/env python
 import subprocess
+from argparse import ArgumentParser
 from functools import lru_cache
 from pathlib import Path
 from typing import List
@@ -24,8 +26,10 @@ def contains_python_file(folder: Path) -> bool:
 
 
 def main() -> int:
-    # TODO parse args
-    create_missing = False
+    parser = ArgumentParser()
+    parser.add_argument("--fix", action="store_true")
+
+    parsed_args = parser.parse_args()
 
     # get absolute path of all non-root folders with git-tracked files
     folders_raw = run_command(
@@ -40,16 +44,20 @@ def main() -> int:
         if not init_path.exists() and contains_python_file(folder):
             missing_init_files.append(init_path)
 
-    if create_missing:
+    if parsed_args.fix:
         for file in missing_init_files:
             file.touch(mode=0o644)
             file.write_text("\n")
-        print(f"Created {len(missing_init_files)} missing __init__.py files.")
+
+        if missing_init_files:
+            print(f"Created {len(missing_init_files)} missing __init__.py files.")
 
     else:
         for file in sorted(missing_init_files):
             print(file.resolve())
-        print(f"Found {len(missing_init_files)} missing __init__.py files.")
+
+        if missing_init_files:
+            print(f"Found {len(missing_init_files)} missing __init__.py files.")
 
     if missing_init_files:
         return 1
