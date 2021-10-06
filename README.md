@@ -13,14 +13,14 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.0.1  # Please check what the latest available version is
+    rev: v0.0.3
     hooks:
     - id: detect-mising-init
       args: ['--fix']  # See the arguments section
 ```
 
 ### Arguments
-When no flags/arguments are specified, the hook just reports missing files and exits.
+Without arguments the hook just reports missing files without making any changes.
 
 * `--fix`: create the missing `__init__.py` files.
 
