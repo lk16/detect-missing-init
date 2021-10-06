@@ -44,6 +44,7 @@ python -m py.test tests/ --cov=hook --cov-report term-missing
 ```
 
 ### TODO
-- Add tests
+- Add integration test for `main()`
+- Add `--auto-track` to `git add` generated files.
 - Add flag to expect `__init__.py` file in repo root
 - Setup CI
