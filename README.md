@@ -42,3 +42,4 @@ This hook prevents this issue.
 ### TODO
 - Add tests
 - Add flag to expect `__init__.py` file in repo root
+- Setup CI
