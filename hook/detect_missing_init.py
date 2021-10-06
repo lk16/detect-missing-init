@@ -1,17 +1,20 @@
 #!/usr/bin/env python
-import subprocess
 from argparse import ArgumentParser
 from functools import lru_cache
 from pathlib import Path
-from typing import List
+from typing import List, Set
+
+from git.cmd import Git
 
 
-def run_command(command: str) -> List[str]:
-    process = subprocess.run(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
-    )
+def get_tracked_files() -> List[Path]:
+    raw_output = Git().ls_files()
 
-    return process.stdout.decode("utf-8").strip().split("\n")
+    return [Path(file).resolve() for file in raw_output.strip().split("\n")]
+
+
+def get_folders_with_tracked_files() -> Set[Path]:
+    return {file.parent.resolve() for file in get_tracked_files()}
 
 
 @lru_cache(maxsize=None)
@@ -31,11 +34,9 @@ def main() -> int:
 
     parsed_args = parser.parse_args()
 
-    # get absolute path of all non-root folders with git-tracked files
-    folders_raw = run_command(
-        r"git ls-files | xargs -n 1 dirname | sort | uniq | grep -v '^\.$' | xargs realpath"
-    )
-    folders = [Path(folder) for folder in folders_raw]
+    folders = get_folders_with_tracked_files()
+
+    folders.remove(Path(".").resolve())
 
     missing_init_files: List[Path] = []
 
