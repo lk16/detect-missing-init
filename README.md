@@ -41,6 +41,4 @@ This hook prevents this issue.
 
 ### TODO
 - Add tests
-- Rewrite shell pipe command in plain python for portability
-- Return non-zero exitcode if unstaged `__init__.py` files are found
 - Add flag to expect `__init__.py` file in repo root
