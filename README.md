@@ -38,6 +38,10 @@ This hook prevents this issue.
 
 [Yes](.pre-commit-config.yaml#L41).
 
+### Run tests
+```sh
+python -m py.test tests/ --cov=hook --cov-report term-missing
+```
 
 ### TODO
 - Add tests
