@@ -5,16 +5,24 @@ This pre-commit hook checks if there are any folders that satisfy these conditio
 * have no `__init__.py` file
 * are not the repository root. [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660).
 
+Missing files can be created automatically, see the Flags section.
+
 ### Usage
-Add the following to your `pre-commit-config.yaml`:
+Add the below yaml snippet to your `pre-commit-config.yaml`.
+Optionally run `pre-commit run --all-files` to check if the hook finds any problems. Otherwise it will run on any commit going forward.
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.0.1  # Please check what the latest version is
+    rev: v0.0.1  # Please check what the latest available version is
     hooks:
     - id: detect-mising-init
-      args: ['--fix']  # Leave this line out if you don't want the hook to make any changes
+      args: ['--fix']  # See the arguments section
 ```
+
+### Arguments
+When no flags/arguments are specified, the hook just reports missing files and exits.
+
+* `--fix`: create the missing `__init__.py` files.
 
 ### Why?
 Since python 3.3 [Implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
@@ -24,10 +32,6 @@ Mypy is sometimes used with `--ignore-missing-imports`, which has the side effec
 So not only will mypy completely skip type checking your entire package, it does this without informing the user.
 
 This hook prevents this issue.
-
-### Flags
-* `--fix`: create the missing `__init__.py` files
-
 
 ### FAQ
 > Does this repo check itself with itself?
