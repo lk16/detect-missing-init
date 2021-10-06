@@ -5,7 +5,7 @@ This pre-commit hook checks if there are any folders that satisfy these conditio
 * have no `__init__.py` file
 * are not the repository root. [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660).
 
-Missing files can be created automatically, see the Flags section.
+Missing files can be created automatically, see the Arguments section below.
 
 ### Usage
 Add the below yaml snippet to your `pre-commit-config.yaml`.
@@ -25,7 +25,7 @@ When no flags/arguments are specified, the hook just reports missing files and e
 * `--fix`: create the missing `__init__.py` files.
 
 ### Why?
-Since python 3.3 [Implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
+Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
 
 However some tools like mypy, will [not recognize](https://github.com/python/mypy/issues/2773) folders with python files without `__init__.py` as packages.
 Mypy is sometimes used with `--ignore-missing-imports`, which has the side effect of silently ignoring these packages.
@@ -37,3 +37,10 @@ This hook prevents this issue.
 > Does this repo check itself with itself?
 
 [Yes](.pre-commit-config.yaml#L41).
+
+
+### TODO
+- Add tests
+- Rewrite shell pipe command in plain python for portability
+- Return non-zero exitcode if unstaged `__init__.py` files are found
+- Add flag to expect `__init__.py` file in repo root
