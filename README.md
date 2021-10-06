@@ -36,4 +36,4 @@ This hook prevents this issue.
 ### FAQ
 > Does this repo check itself with itself?
 
-[Yes](pre-commit-config.yaml).
+[Yes](.pre-commit-config.yaml#L41).
