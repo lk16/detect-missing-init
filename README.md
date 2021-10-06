@@ -1,8 +1,9 @@
 # Detect missing `__init__.py` files
 
-This pre-commit hook checks if there are any folders that both:
+This pre-commit hook checks if there are any folders that satisfy these conditions:
 * (indirectly) contain a python file
 * have no `__init__.py` file
+* are not the repository root. [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660).
 
 ### Usage
 Add the following to your `pre-commit-config.yaml`:
