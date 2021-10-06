@@ -37,31 +37,34 @@ def contains_python_file(folder: Path) -> bool:
     return False
 
 
-def find_missing_init_files(folders: Set[Path]) -> List[Path]:
-    missing_init_files: List[Path] = []
+def find_missing_init_files(folders: Set[Path]) -> Set[Path]:
+    missing_init_files: Set[Path] = set()
 
     for folder in folders:
         init_path = folder / "__init__.py"
         if not init_path.exists() and contains_python_file(folder):
-            missing_init_files.append(init_path)
+            missing_init_files.add(init_path)
 
     return missing_init_files
 
 
-def check_all_init_files_tracked():
-    untracked_init_files = list(
-        filter(lambda file: file.name == "__init__.py", get_untracked_files())
-    )
+def check_all_init_files_tracked() -> bool:
+    untracked_init_files: List[Path] = []
+
+    for file in get_untracked_files():
+        if file.name == "__init__.py":
+            untracked_init_files.append(file)
 
     if untracked_init_files:
         for file in sorted(untracked_init_files):
             print(file)
         print(f"Found {len(untracked_init_files)} untracked __init__.py file(s).")
         return False
+
     return True
 
 
-def add_missing_init_files(missing_init_files: List[Path]) -> None:
+def create_missing_init_files(missing_init_files: Set[Path]) -> None:
     for file in missing_init_files:
         file.write_text("\n")
 
@@ -69,7 +72,7 @@ def add_missing_init_files(missing_init_files: List[Path]) -> None:
         print(f"Created {len(missing_init_files)} missing __init__.py file(s).")
 
 
-def list_missing_init_files(missing_init_files: List[Path]) -> None:
+def print_missing_init_files(missing_init_files: Set[Path]) -> None:
     for file in sorted(missing_init_files):
         print(file.resolve())
 
@@ -89,9 +92,9 @@ def main() -> int:
     missing_init_files = find_missing_init_files(folders)
 
     if parsed_args.fix:
-        add_missing_init_files(missing_init_files)
+        create_missing_init_files(missing_init_files)
     else:
-        list_missing_init_files(missing_init_files)
+        print_missing_init_files(missing_init_files)
 
     if missing_init_files:
         return 1
