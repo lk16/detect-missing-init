@@ -4,6 +4,17 @@ This pre-commit hook checks if there are any folders that both:
 * (indirectly) contain a python file
 * have no `__init__.py` file
 
+### Usage
+Add the following to your `pre-commit-config.yaml`:
+
+```yaml
+  - repo: https://github.com/lk16/detect-missing-init
+    rev: v0.0.1  # Please check what the latest version is
+    hooks:
+    - id: detect-mising-init
+      args: ['--fix']  # Leave this line out if you don't want the hook to make any changes
+```
+
 ### Why?
 Since python 3.3 [Implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
 
@@ -15,3 +26,9 @@ This hook prevents this issue.
 
 ### Flags
 * `--fix`: create the missing `__init__.py` files
+
+
+### FAQ
+> Does this repo check itself with itself?
+
+[Yes](pre-commit-config.yaml).
