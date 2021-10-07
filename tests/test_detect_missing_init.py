@@ -26,6 +26,11 @@ def temporary_directory():
         yield Path(dir)
 
 
+@pytest.fixture(autouse=True)
+def clear_contains_pyton_file_cache():
+    contains_python_file.cache_clear()
+
+
 @contextlib.contextmanager
 def change_directory(dir: Path):
     old_dir = Path.cwd()
@@ -34,8 +39,13 @@ def change_directory(dir: Path):
     os.chdir(old_dir)
 
 
-def get_paths_recursively(dir: Path) -> Set[Path]:
-    return set(dir.glob("**/*"))
+def get_file_descendants(dir: Path) -> Set[Path]:
+    descendants = dir.glob("**/*")
+    return set(
+        descendant.relative_to(dir)
+        for descendant in descendants
+        if descendant.is_file()
+    )
 
 
 @pytest.mark.parametrize(
@@ -155,7 +165,6 @@ def test_print_missing_init_files(temporary_directory: Path, capsys: CaptureFixt
     assert expected_stdout == captured.out
 
 
-@pytest.mark.skip  # TODO
 @pytest.mark.parametrize(
     ["tracked_files", "untracked_files", "expected_exit_code"],
     [
@@ -165,9 +174,14 @@ def test_print_missing_init_files(temporary_directory: Path, capsys: CaptureFixt
         ([Path("a/foo.py")], [], 1),
         ([Path("a/b/foo.py")], [], 1),
         ([Path("a/b/foo.bar")], [], 0),
+        ([], [Path("__init__.py")], 2),
+        ([], [Path("a/__init__.py")], 2),
+        ([], [Path("a/b/__init__.py")], 2),
+        ([], [Path("foo.bar")], 0),
+        ([], [Path("a/b/foo.bar")], 0),
     ],
 )
-def test_main(
+def test_main_default(
     temporary_directory: Path,
     tracked_files: List[Path],
     untracked_files: List[Path],
@@ -182,6 +196,45 @@ def test_main(
 
     with change_directory(temporary_directory):
         assert expected_exit_code == main([])
+
+    expected_file_descendants = set(tracked_files + untracked_files)
+    assert expected_file_descendants == get_file_descendants(temporary_directory)
+
+
+@pytest.mark.parametrize(
+    ["tracked_files", "untracked_files", "expected_exit_code"],
+    [
+        ([], [], 0),
+        ([Path("foo.py")], [], 0),
+        ([Path("foo.bar")], [], 0),
+        ([Path("a/foo.py")], [Path("a/__init__.py")], 2),
+        ([Path("a/b/foo.py")], [Path("a/__init__.py"), Path("a/b/__init__.py")], 2),
+        ([Path("a/b/foo.bar")], [], 0),
+        ([], [Path("__init__.py")], 2),
+        ([], [Path("a/__init__.py")], 2),
+        ([], [Path("a/b/__init__.py")], 2),
+        ([], [Path("foo.bar")], 0),
+        ([], [Path("a/b/foo.bar")], 0),
+    ],
+)
+def test_main_create(
+    temporary_directory: Path,
+    tracked_files: List[Path],
+    untracked_files: List[Path],
+    expected_exit_code: int,
+):
+    detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
+    detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
+
+    for file in tracked_files + untracked_files:
+        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / file).touch()
+
+    with change_directory(temporary_directory):
+        assert expected_exit_code == main(["--create"])
+
+    expected_file_descendants = set(tracked_files + untracked_files)
+    assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
 # TODO test with --fix
