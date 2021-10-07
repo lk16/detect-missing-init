@@ -1,15 +1,15 @@
 # Detect missing `__init__.py` files
 
 This pre-commit hook checks if there are any folders that satisfy these conditions:
-* (indirectly) contain a python file
-* have no `__init__.py` file
-* are not the repository root. [Override](#arguments). [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660)?
+* it (directly or indirectly) contains a python file
+* it contains no `__init__.py` file
+* it is not the repository root. Can be [overridden](#arguments). [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660)?
 
 Missing files can be created automatically, see the Arguments section below.
 
 ### Usage
 Add the below yaml snippet to your `pre-commit-config.yaml`.
-Optionally run `pre-commit run --all-files` to check if the hook finds any problems. Otherwise it will run on any commit going forward.
+Optionally run `pre-commit run --all-files` to check if the hook finds any problems. Otherwise it will run automatically on any future commit.
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
@@ -47,5 +47,4 @@ python -m py.test tests/ --cov=hook --cov-report term-missing
 ```
 
 ### TODO
-- Add flag to expect `__init__.py` file in repo root
 - Setup CI
