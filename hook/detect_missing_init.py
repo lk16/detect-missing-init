@@ -95,6 +95,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--track", action="store_true")
+    parser.add_argument("--expect-root-init", action="store_true")
     parsed_args = parser.parse_args(argv)
 
     if parsed_args.track and not parsed_args.create:
@@ -102,7 +103,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 3
 
     folders = get_folders_with_tracked_files()
-    folders.discard(Path("."))
+
+    if not parsed_args.expect_root_init:
+        folders.discard(Path("."))
 
     missing_init_files = find_missing_init_files(folders)
 

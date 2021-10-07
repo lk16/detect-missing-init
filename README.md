@@ -3,7 +3,7 @@
 This pre-commit hook checks if there are any folders that satisfy these conditions:
 * (indirectly) contain a python file
 * have no `__init__.py` file
-* are not the repository root. [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660).
+* are not the repository root. [Override](#arguments). [Why](https://github.com/timbrel/GitSavvy/issues/626#issuecomment-290631660)?
 
 Missing files can be created automatically, see the Arguments section below.
 
@@ -25,6 +25,7 @@ This is a design choice: the user should opt-in for any behavior than the basic 
 
 * `--create`: create the missing `__init__.py` files.
 * `--track`: effectively runs `git add` on all created `__init__.py` files. Requires `--create`.
+* `--expect-root-init`: expect an `__init__.py` file in the repository root if there is any python file in the repository.
 
 ### Why?
 Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
@@ -46,7 +47,5 @@ python -m py.test tests/ --cov=hook --cov-report term-missing
 ```
 
 ### TODO
-- Add integration test for `main()`
-- Add `--auto-track` to `git add` generated files.
 - Add flag to expect `__init__.py` file in repo root
 - Setup CI
