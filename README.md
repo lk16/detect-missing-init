@@ -13,7 +13,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.0.4
+    rev: v0.0.5
     hooks:
     - id: detect-mising-init
       args: ['--create', "--track"]  # See the arguments section
@@ -21,7 +21,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ### Arguments
 Without arguments the hook just reports missing files without making any changes.
-This is a design choice: the user should opt-in for any behavior than the basic check for missing files.
+This is a design choice: the user should opt-in for any behavior other than the basic check for missing files.
 
 * `--create`: create the missing `__init__.py` files.
 * `--track`: effectively runs `git add` on all created `__init__.py` files. Requires `--create`.
