@@ -18,11 +18,11 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          python -m pip install poetry pre-commit
+          python -m pip install poetry pre-commit pytest
           poetry install
       - name: Run pre-commit hooks
         run: |
           pre-commit run --all-files
       - name: Test with pytest
         run: |
-          pytest
+          python -m py.test tests/ --cov=hook --cov-report term-missing
