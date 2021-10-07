@@ -88,6 +88,7 @@ def print_missing_init_files(missing_init_files: Set[Path]) -> None:
 def main(argv: List[str]) -> int:
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
+    parser.add_argument("--track", action="store_true")
     parsed_args = parser.parse_args(argv)
 
     folders = get_folders_with_tracked_files()
@@ -100,7 +101,10 @@ def main(argv: List[str]) -> int:
     else:
         print_missing_init_files(missing_init_files)
 
-    if missing_init_files:
+    if parsed_args.track:
+        raise NotImplementedError  # TODO
+
+    elif missing_init_files:
         return 1
 
     if not check_all_init_files_tracked():

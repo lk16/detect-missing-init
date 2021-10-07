@@ -237,6 +237,4 @@ def test_main_create(
     assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
-# TODO test with --fix
-
-# TODO test with --fix --track
+# TODO test with --create --track

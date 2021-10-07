@@ -13,16 +13,16 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.0.3
+    rev: v0.0.4
     hooks:
     - id: detect-mising-init
-      args: ['--fix']  # See the arguments section
+      args: ['--create']  # See the arguments section
 ```
 
 ### Arguments
 Without arguments the hook just reports missing files without making any changes.
 
-* `--fix`: create the missing `__init__.py` files.
+* `--create`: create the missing `__init__.py` files.
 
 ### Why?
 Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
