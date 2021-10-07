@@ -237,4 +237,47 @@ def test_main_create(
     assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
-# TODO test with --create --track
+def test_main_track_without_create():
+    assert 3 == main(["--track"])
+
+
+@pytest.mark.parametrize(
+    ["tracked_files", "untracked_files", "expected_exit_code", "newly_tracked_files"],
+    [
+        ([], [], 0, set()),
+        ([Path("foo.py")], [], 0, set()),
+        ([Path("foo.bar")], [], 0, set()),
+        ([Path("a/foo.py")], [], 1, {Path("a/__init__.py")}),
+        ([Path("a/b/foo.py")], [], 1, {Path("a/__init__.py"), Path("a/b/__init__.py")}),
+        ([Path("a/b/foo.bar")], [], 0, set()),
+        ([], [Path("__init__.py")], 2, set()),
+        ([], [Path("a/__init__.py")], 2, set()),
+        ([], [Path("a/b/__init__.py")], 2, set()),
+        ([], [Path("foo.bar")], 0, set()),
+        ([], [Path("a/b/foo.bar")], 0, set()),
+    ],
+)
+def test_main_track(
+    temporary_directory: Path,
+    tracked_files: List[Path],
+    untracked_files: List[Path],
+    expected_exit_code: int,
+    newly_tracked_files: Set[Path],
+):
+    detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
+    detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
+    detect_missing_init.track_files = Mock()
+
+    for file in tracked_files + untracked_files:
+        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / file).touch()
+
+    with change_directory(temporary_directory):
+        assert expected_exit_code == main(["--create", "--track"])
+
+    detect_missing_init.track_files.assert_called_with(newly_tracked_files)
+
+    expected_file_descendants = set(tracked_files + untracked_files) | set(
+        newly_tracked_files
+    )
+    assert expected_file_descendants == get_file_descendants(temporary_directory)

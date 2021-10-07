@@ -21,6 +21,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ### Arguments
 Without arguments the hook just reports missing files without making any changes.
+This is a design choice: the user should opt-in for any behavior than the basic check for missing files.
 
 * `--create`: create the missing `__init__.py` files.
 

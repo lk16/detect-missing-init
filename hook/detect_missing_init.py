@@ -13,8 +13,7 @@ def get_untracked_files() -> List[Path]:
     return [Path(file).resolve() for file in raw_output.strip().split("\n")]
 
 
-def stage_files(files: Set[Path]) -> None:
-    # TODO use this with flag
+def track_files(files: Set[Path]) -> None:
     Git().add(*list(files))
 
 
@@ -91,6 +90,10 @@ def main(argv: List[str]) -> int:
     parser.add_argument("--track", action="store_true")
     parsed_args = parser.parse_args(argv)
 
+    if parsed_args.track and not parsed_args.create:
+        print("--track requires --create")
+        return 3
+
     folders = get_folders_with_tracked_files()
     folders.discard(Path("."))
 
@@ -102,9 +105,9 @@ def main(argv: List[str]) -> int:
         print_missing_init_files(missing_init_files)
 
     if parsed_args.track:
-        raise NotImplementedError  # TODO
+        track_files(missing_init_files)
 
-    elif missing_init_files:
+    if missing_init_files:
         return 1
 
     if not check_all_init_files_tracked():
