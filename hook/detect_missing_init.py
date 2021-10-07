@@ -3,7 +3,7 @@ import sys
 from argparse import ArgumentParser
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Set
+from typing import List, Optional, Set
 
 from git.cmd import Git
 
@@ -68,12 +68,16 @@ def check_all_init_files_tracked() -> bool:
     return True
 
 
-def create_missing_init_files(missing_init_files: Set[Path]) -> None:
+def create_missing_init_files(missing_init_files: Set[Path], track: bool) -> None:
     for file in missing_init_files:
         file.write_text("\n")
 
     if missing_init_files:
-        print(f"Created {len(missing_init_files)} missing __init__.py file(s).")
+        if track:
+            track_files(missing_init_files)
+            print(f"Added {len(missing_init_files)} missing __init__.py file(s).")
+        else:
+            print(f"Created {len(missing_init_files)} missing __init__.py file(s).")
 
 
 def print_missing_init_files(missing_init_files: Set[Path]) -> None:
@@ -84,7 +88,10 @@ def print_missing_init_files(missing_init_files: Set[Path]) -> None:
         print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
 
 
-def main(argv: List[str]) -> int:
+def main(argv: Optional[List[str]] = None) -> int:
+    if argv is None:
+        argv = sys.argv[1:]
+
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--track", action="store_true")
@@ -100,12 +107,9 @@ def main(argv: List[str]) -> int:
     missing_init_files = find_missing_init_files(folders)
 
     if parsed_args.create:
-        create_missing_init_files(missing_init_files)
+        create_missing_init_files(missing_init_files, parsed_args.track)
     else:
         print_missing_init_files(missing_init_files)
-
-    if parsed_args.track:
-        track_files(missing_init_files)
 
     if missing_init_files:
         return 1
@@ -117,4 +121,4 @@ def main(argv: List[str]) -> int:
 
 
 if __name__ == "__main__":
-    exit(main(sys.argv[1:]))
+    exit(main())

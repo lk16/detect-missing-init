@@ -16,7 +16,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
     rev: v0.0.4
     hooks:
     - id: detect-mising-init
-      args: ['--create']  # See the arguments section
+      args: ['--create', "--track"]  # See the arguments section
 ```
 
 ### Arguments
@@ -24,6 +24,7 @@ Without arguments the hook just reports missing files without making any changes
 This is a design choice: the user should opt-in for any behavior than the basic check for missing files.
 
 * `--create`: create the missing `__init__.py` files.
+* `--track`: effectively runs `git add` on all created `__init__.py` files. Requires `--create`.
 
 ### Why?
 Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.

@@ -136,7 +136,7 @@ def test_create_missing_init_files(temporary_directory: Path, capsys: CaptureFix
     Path(temporary_directory / "foo").mkdir(parents=True, exist_ok=True)
 
     with change_directory(temporary_directory):
-        create_missing_init_files(files)
+        create_missing_init_files(files, False)
 
     for file in files:
         assert Path(temporary_directory / file).exists()
@@ -275,7 +275,10 @@ def test_main_track(
     with change_directory(temporary_directory):
         assert expected_exit_code == main(["--create", "--track"])
 
-    detect_missing_init.track_files.assert_called_with(newly_tracked_files)
+    if newly_tracked_files:
+        detect_missing_init.track_files.assert_called_with(newly_tracked_files)
+    else:
+        detect_missing_init.track_files.assert_not_called()
 
     expected_file_descendants = set(tracked_files + untracked_files) | set(
         newly_tracked_files
