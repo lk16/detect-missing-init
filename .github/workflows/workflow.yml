@@ -18,7 +18,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          apt-get install -y git
+          sudo apt-get install -y git
           python -m pip install pre-commit pytest pytest-cov
       - name: Run pre-commit hooks
         run: |
