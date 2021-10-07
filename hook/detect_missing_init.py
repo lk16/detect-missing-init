@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import sys
 from argparse import ArgumentParser
 from functools import lru_cache
 from pathlib import Path
@@ -10,6 +11,11 @@ from git.cmd import Git
 def get_untracked_files() -> List[Path]:
     raw_output = Git().ls_files("--others", "--exclude-standard")
     return [Path(file).resolve() for file in raw_output.strip().split("\n")]
+
+
+def stage_files(files: Set[Path]) -> None:
+    # TODO use this with flag
+    Git().add(*list(files))
 
 
 def get_tracked_files() -> List[Path]:
@@ -39,7 +45,6 @@ def contains_python_file(folder: Path) -> bool:
 
 def find_missing_init_files(folders: Set[Path]) -> Set[Path]:
     missing_init_files: Set[Path] = set()
-
     for folder in folders:
         init_path = folder / "__init__.py"
         if not init_path.exists() and contains_python_file(folder):
@@ -80,18 +85,17 @@ def print_missing_init_files(missing_init_files: Set[Path]) -> None:
         print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
 
 
-def main() -> int:
+def main(argv: List[str]) -> int:
     parser = ArgumentParser()
-    parser.add_argument("--fix", action="store_true")
-    parsed_args = parser.parse_args()
+    parser.add_argument("--create", action="store_true")
+    parsed_args = parser.parse_args(argv)
 
     folders = get_folders_with_tracked_files()
-
-    folders.remove(Path("."))
+    folders.discard(Path("."))
 
     missing_init_files = find_missing_init_files(folders)
 
-    if parsed_args.fix:
+    if parsed_args.create:
         create_missing_init_files(missing_init_files)
     else:
         print_missing_init_files(missing_init_files)
@@ -100,10 +104,10 @@ def main() -> int:
         return 1
 
     if not check_all_init_files_tracked():
-        return 1
+        return 2
 
     return 0
 
 
 if __name__ == "__main__":
-    exit(main())
+    exit(main(sys.argv[1:]))

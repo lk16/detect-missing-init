@@ -1,23 +1,41 @@
+import contextlib
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List, Set
 from unittest.mock import Mock
 
 import pytest
+from _pytest.capture import CaptureFixture
 
 from hook import detect_missing_init
 from hook.detect_missing_init import (
     check_all_init_files_tracked,
     contains_python_file,
+    create_missing_init_files,
     find_missing_init_files,
     get_folders_with_tracked_files,
+    main,
+    print_missing_init_files,
 )
 
 
 @pytest.fixture()
-def temporary_dir():
+def temporary_directory():
     with TemporaryDirectory() as dir:
         yield Path(dir)
+
+
+@contextlib.contextmanager
+def change_directory(dir: Path):
+    old_dir = Path.cwd()
+    os.chdir(dir)
+    yield
+    os.chdir(old_dir)
+
+
+def get_paths_recursively(dir: Path) -> Set[Path]:
+    return set(dir.glob("**/*"))
 
 
 @pytest.mark.parametrize(
@@ -46,13 +64,13 @@ def test_get_folders_with_tracked_files(tracked_files: List[Path], folders: Set[
     ],
 )
 def test_contains_python_file(
-    temporary_dir: Path, files: List[str], expected_value: bool
+    temporary_directory: Path, files: List[str], expected_value: bool
 ):
     for file in files:
-        Path(temporary_dir / file).parent.mkdir(parents=True, exist_ok=True)
-        Path(temporary_dir / file).touch()
+        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / file).touch()
 
-    assert expected_value == contains_python_file(temporary_dir)
+    assert expected_value == contains_python_file(temporary_directory)
 
 
 @pytest.mark.parametrize(
@@ -85,19 +103,87 @@ def test_check_all_init_files_tracked(
     ],
 )
 def test_find_missing_init_files(
-    temporary_dir: Path,
+    temporary_directory: Path,
     folders: List[Path],
     files: List[Path],
     expected_value: Set[Path],
 ):
     for folder in folders:
-        Path(temporary_dir / folder).mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / folder).mkdir(parents=True, exist_ok=True)
 
     for file in files:
-        Path(temporary_dir / file).touch()
+        Path(temporary_directory / file).touch()
 
-    resolved_folders = {Path(temporary_dir / folder) for folder in folders}
+    resolved_folders = {Path(temporary_directory / folder) for folder in folders}
     resolved_expected_value = {
-        Path(temporary_dir / folder) for folder in expected_value
+        Path(temporary_directory / folder) for folder in expected_value
     }
     assert resolved_expected_value == find_missing_init_files(resolved_folders)
+
+
+def test_create_missing_init_files(temporary_directory: Path, capsys: CaptureFixture):
+    files = {Path("__init__.py"), Path("foo/__init__.py")}
+    Path(temporary_directory / "foo").mkdir(parents=True, exist_ok=True)
+
+    with change_directory(temporary_directory):
+        create_missing_init_files(files)
+
+    for file in files:
+        assert Path(temporary_directory / file).exists()
+
+    captured = capsys.readouterr()
+    assert captured.out == "Created 2 missing __init__.py file(s).\n"
+
+
+def test_print_missing_init_files(temporary_directory: Path, capsys: CaptureFixture):
+    files = {Path("__init__.py"), Path("foo/__init__.py")}
+    Path(temporary_directory / "foo").mkdir(parents=True, exist_ok=True)
+
+    with change_directory(temporary_directory):
+        print_missing_init_files(files)
+
+    for file in files:
+        assert not Path(temporary_directory / file).exists()
+
+    expected_stdout = ""
+    for file in sorted(files):
+        expected_stdout += str(Path(temporary_directory / file).resolve()) + "\n"
+
+    expected_stdout += "Found 2 missing __init__.py file(s).\n"
+
+    captured = capsys.readouterr()
+    assert expected_stdout == captured.out
+
+
+@pytest.mark.skip  # TODO
+@pytest.mark.parametrize(
+    ["tracked_files", "untracked_files", "expected_exit_code"],
+    [
+        ([], [], 0),
+        ([Path("foo.py")], [], 0),
+        ([Path("foo.bar")], [], 0),
+        ([Path("a/foo.py")], [], 1),
+        ([Path("a/b/foo.py")], [], 1),
+        ([Path("a/b/foo.bar")], [], 0),
+    ],
+)
+def test_main(
+    temporary_directory: Path,
+    tracked_files: List[Path],
+    untracked_files: List[Path],
+    expected_exit_code: int,
+):
+    detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
+    detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
+
+    for file in tracked_files + untracked_files:
+        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / file).touch()
+
+    with change_directory(temporary_directory):
+        assert expected_exit_code == main([])
+
+
+# TODO test with --fix
+
+# TODO test with --fix --track
