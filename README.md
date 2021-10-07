@@ -13,7 +13,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.1.0
+    rev: v0.1.1
     hooks:
     - id: detect-mising-init
       args: ['--create', "--track"]  # See the arguments section
@@ -45,6 +45,3 @@ This hook prevents this issue.
 ```sh
 python -m py.test tests/ --cov=hook --cov-report term-missing
 ```
-
-### TODO
-- Setup CI
