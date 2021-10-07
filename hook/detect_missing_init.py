@@ -70,7 +70,7 @@ def check_all_init_files_tracked() -> bool:
 
 def create_missing_init_files(missing_init_files: Set[Path], track: bool) -> None:
     for file in missing_init_files:
-        file.write_text("\n")
+        file.touch()
 
     if missing_init_files:
         if track:
