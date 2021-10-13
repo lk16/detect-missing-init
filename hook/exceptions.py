@@ -26,3 +26,10 @@ class UntrackedPathException(SkippedFolderHandlingException):
         kwargs = {}
         kwargs["message"] = "Found untracked path in skipped folders"
         super().__init__(path=path, **kwargs)
+
+
+class NotAFolderException(SkippedFolderHandlingException):
+    def __init__(self, path: Path) -> None:
+        kwargs = {}
+        kwargs["message"] = "Found path which is not a folder"
+        super().__init__(path=path, **kwargs)

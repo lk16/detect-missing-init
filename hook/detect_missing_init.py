@@ -10,6 +10,7 @@ from git.cmd import Git
 from hook.exceptions import (
     AbsolutePathException,
     DuplicatePathException,
+    NotAFolderException,
     SkippedFolderHandlingException,
     UntrackedPathException,
 )
@@ -103,23 +104,25 @@ def handle_skipped_folders(
 
     skipped_folders: Set[Path] = set()
 
-    for skipped_item in skipped_folders_flag.split(","):
-        folder = Path(skipped_item)
+    for split_flag in skipped_folders_flag.split(","):
+        path = Path(split_flag)
 
-        if folder.is_absolute():
-            raise AbsolutePathException(folder)
+        if path.is_absolute():
+            raise AbsolutePathException(path)
 
-        if folder in skipped_folders:
-            raise DuplicatePathException(folder)
+        if not path.is_dir():
+            raise NotAFolderException(path)
 
-        skipped_folders.add(folder)
+        if path in skipped_folders:
+            raise DuplicatePathException(path)
+
+        skipped_folders.add(path)
 
     for skipped_folder in skipped_folders:
-        # TODO check if skipped_folder is tracked by git
-        if False:
-            raise UntrackedPathException(folder)
-
-        folders.discard(skipped_folder)
+        try:
+            folders.remove(skipped_folder)
+        except KeyError as e:
+            raise UntrackedPathException(skipped_folder) from e
 
     return folders
 
