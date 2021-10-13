@@ -21,15 +21,8 @@ class DuplicatePathException(SkippedFolderHandlingException):
         super().__init__(path=path, **kwargs)
 
 
-class UntrackedPathException(SkippedFolderHandlingException):
-    def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Found untracked path in skipped folders"
-        super().__init__(path=path, **kwargs)
-
-
 class NotAFolderException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
         kwargs = {}
-        kwargs["message"] = "Found path which is not a folder"
+        kwargs["message"] = "Found path which is not a (tracked) folder"
         super().__init__(path=path, **kwargs)

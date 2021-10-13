@@ -12,7 +12,6 @@ from hook.exceptions import (
     DuplicatePathException,
     NotAFolderException,
     SkippedFolderHandlingException,
-    UntrackedPathException,
 )
 
 
@@ -110,7 +109,7 @@ def handle_skipped_folders(
         if path.is_absolute():
             raise AbsolutePathException(path)
 
-        if not path.is_dir():
+        if not path.exists() or not path.is_dir():
             raise NotAFolderException(path)
 
         if path in skipped_folders:
@@ -119,10 +118,7 @@ def handle_skipped_folders(
         skipped_folders.add(path)
 
     for skipped_folder in skipped_folders:
-        try:
-            folders.remove(skipped_folder)
-        except KeyError as e:
-            raise UntrackedPathException(skipped_folder) from e
+        folders.discard(skipped_folder)
 
     return folders
 
@@ -151,7 +147,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         folders = handle_skipped_folders(parsed_args.skipped_folders, folders)
     except SkippedFolderHandlingException as e:
         print(f"{e.message}: {e.path}", file=sys.stderr)
-        return 3
+        return 4
 
     missing_init_files = find_missing_init_files(folders)
 
