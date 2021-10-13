@@ -7,6 +7,13 @@ from typing import List, Optional, Set
 
 from git.cmd import Git
 
+from hook.exceptions import (
+    AbsolutePathException,
+    DuplicatePathException,
+    SkippedFolderHandlingException,
+    UntrackedPathException,
+)
+
 
 def get_untracked_files() -> List[Path]:
     raw_output = Git().ls_files("--others", "--exclude-standard")
@@ -88,6 +95,35 @@ def print_missing_init_files(missing_init_files: Set[Path]) -> None:
         print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
 
 
+def handle_skipped_folders(
+    skipped_folders_flag: Optional[str], folders: Set[Path]
+) -> Set[Path]:
+    if skipped_folders_flag is None:
+        return folders
+
+    skipped_folders: Set[Path] = set()
+
+    for skipped_item in skipped_folders_flag.split(","):
+        folder = Path(skipped_item)
+
+        if folder.is_absolute():
+            raise AbsolutePathException(folder)
+
+        if folder in skipped_folders:
+            raise DuplicatePathException(folder)
+
+        skipped_folders.add(folder)
+
+    for skipped_folder in skipped_folders:
+        # TODO check if skipped_folder is tracked by git
+        if False:
+            raise UntrackedPathException(folder)
+
+        folders.discard(skipped_folder)
+
+    return folders
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     if argv is None:
         argv = sys.argv[1:]
@@ -96,6 +132,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--track", action="store_true")
     parser.add_argument("--expect-root-init", action="store_true")
+    parser.add_argument("--skip-folders", dest="skipped_folders")
     parsed_args = parser.parse_args(argv)
 
     if parsed_args.track and not parsed_args.create:
@@ -106,6 +143,12 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if not parsed_args.expect_root_init:
         folders.discard(Path("."))
+
+    try:
+        folders = handle_skipped_folders(parsed_args.skipped_folders, folders)
+    except SkippedFolderHandlingException as e:
+        print(f"{e.message}: {e.path}", file=sys.stderr)
+        return 3
 
     missing_init_files = find_missing_init_files(folders)
 
