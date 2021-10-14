@@ -22,7 +22,10 @@ from hook.detect_missing_init import (
 from hook.exceptions import (
     AbsolutePathException,
     DuplicatePathException,
+    ForbiddenRelativePathException,
+    NonExistentFolderException,
     NotAFolderException,
+    UntrackedFolderException,
 )
 
 
@@ -192,7 +195,9 @@ def test_print_missing_init_files(temporary_directory: Path, capsys: CaptureFixt
             [Path("foo")],
             DuplicatePathException,
         ),
-        ("foo", {Path(".")}, [], [Path("foo")], NotAFolderException),
+        ("foo", {Path(".")}, [], [Path("foo")], UntrackedFolderException),
+        ("foo", {Path(".")}, [], [], NonExistentFolderException),
+        ("..", {Path(".")}, [], [], ForbiddenRelativePathException),
     ],
 )
 def test_handle_skipped_folders(
@@ -203,6 +208,8 @@ def test_handle_skipped_folders(
     existing_folders: List[Path],
     expected_result: Union[Set[Path], Type[Exception]],
 ):
+    detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
+
     for file in existing_files:
         Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
         Path(temporary_directory / file).touch()
@@ -382,20 +389,8 @@ def test_main_expect_root_init(
     assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
-def test_main_skip_folders(
-    temporary_directory: Path,
-    tracked_files: List[Path],
-    expected_exit_code: int,
-):
-    detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
-    detect_missing_init.get_untracked_files = Mock(return_value=[])
-
-    for file in tracked_files:
-        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
-        Path(temporary_directory / file).touch()
+def test_main_skipped_folders_fail(temporary_directory: Path):
+    detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
 
     with change_directory(temporary_directory):
-        assert expected_exit_code == main(["--expect-root-init"])
-
-    expected_file_descendants = set(tracked_files)
-    assert expected_file_descendants == get_file_descendants(temporary_directory)
+        assert 4 == main(["--skip-folders", "foo"])

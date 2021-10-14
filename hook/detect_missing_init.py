@@ -10,8 +10,11 @@ from git.cmd import Git
 from hook.exceptions import (
     AbsolutePathException,
     DuplicatePathException,
+    ForbiddenRelativePathException,
+    NonExistentFolderException,
     NotAFolderException,
     SkippedFolderHandlingException,
+    UntrackedFolderException,
 )
 
 
@@ -27,6 +30,11 @@ def track_files(files: Set[Path]) -> None:
 def get_tracked_files() -> List[Path]:
     raw_output = Git().ls_files()
     return [Path(file) for file in raw_output.strip().split("\n")]
+
+
+def get_repository_root() -> Path:
+    raw_output = Git().rev_parse("--show-toplevel")
+    return Path(raw_output)
 
 
 def get_folders_with_tracked_files() -> Set[Path]:
@@ -101,16 +109,29 @@ def handle_skipped_folders(
     if skipped_folders_flag is None:
         return folders
 
-    skipped_folders: Set[Path] = set()
+    repo_root = get_repository_root()
 
+    skipped_folders: Set[Path] = set()
     for split_flag in skipped_folders_flag.split(","):
         path = Path(split_flag)
 
         if path.is_absolute():
             raise AbsolutePathException(path)
 
-        if not path.exists() or not path.is_dir():
+        try:
+            Path(repo_root).joinpath(path).resolve().relative_to(repo_root.resolve())
+        except ValueError:
+            # prevent directory traverssal attack
+            raise ForbiddenRelativePathException(path)
+
+        if not path.exists():
+            raise NonExistentFolderException(path)
+
+        if not path.is_dir():
             raise NotAFolderException(path)
+
+        if path not in folders:
+            raise UntrackedFolderException(path)
 
         if path in skipped_folders:
             raise DuplicatePathException(path)
