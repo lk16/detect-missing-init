@@ -26,7 +26,7 @@ This is a design choice: the user should opt-in for any behavior other than the 
 * `--create`: create the missing `__init__.py` files.
 * `--track`: effectively runs `git add` on all created `__init__.py` files. Requires `--create`.
 * `--expect-root-init`: expect an `__init__.py` file in the repository root if there is any python file in the repository.
-* `--skip-folders foo,bar/baz`: do not expect (or create/track) `__init__.py` files in these folders. This flag should be followed by a comma-separated list of paths to folders. All listed folders should e relative to the repository root.
+* `--skip-folders foo,bar/baz`: do not expect (or create/track) `__init__.py` files in these folders. This flag should be followed by a comma-separated list of paths to folders. All listed folders should be relative to the repository root.
 
 ### Why?
 Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
