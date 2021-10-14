@@ -48,4 +48,4 @@ class EmptyPathException(SkippedFolderHandlingException):
         super().__init__(path=Path(), message="Skipped folder is an empty string")
 
     def __str__(self) -> str:
-        return "''"
+        return f"{self.message}: ''"
