@@ -15,7 +15,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
   - repo: https://github.com/lk16/detect-missing-init
     rev: v0.1.1
     hooks:
-    - id: detect-mising-init
+    - id: detect-missing-init
       args: ['--create', "--track"]  # See the arguments section
 ```
 
