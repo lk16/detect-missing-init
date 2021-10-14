@@ -10,6 +10,7 @@ from git.cmd import Git
 from hook.exceptions import (
     AbsolutePathException,
     DuplicatePathException,
+    EmptyPathException,
     ForbiddenRelativePathException,
     NonExistentFolderException,
     NotAFolderException,
@@ -113,6 +114,10 @@ def handle_skipped_folders(
 
     skipped_folders: Set[Path] = set()
     for split_flag in skipped_folders_flag.split(","):
+
+        if split_flag == "":
+            raise EmptyPathException()
+
         path = Path(split_flag)
 
         if path.is_absolute():
@@ -167,7 +172,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     try:
         folders = handle_skipped_folders(parsed_args.skipped_folders, folders)
     except SkippedFolderHandlingException as e:
-        print(f"{e.message}: {e.path}", file=sys.stderr)
+        print(str(e), file=sys.stderr)
         return 4
 
     missing_init_files = find_missing_init_files(folders)

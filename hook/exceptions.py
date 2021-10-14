@@ -6,44 +6,46 @@ class SkippedFolderHandlingException(Exception):
         self.message = message
         self.path = path
 
+    def __str__(self) -> str:
+        return f"{self.message}: {self.path}"
+
 
 class AbsolutePathException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Skipped folder has an absolute path"
-        super().__init__(path=path, **kwargs)
+        super().__init__(path=path, message="Skipped folder has an absolute path")
 
 
 class DuplicatePathException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Skipped folders contains a duplicate"
-        super().__init__(path=path, **kwargs)
+        super().__init__(path=path, message="Skipped folders contains a duplicate")
 
 
 class NotAFolderException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Skipped folders contains item which is not folder"
-        super().__init__(path=path, **kwargs)
+
+        super().__init__(
+            path=path, message="Skipped folders contains item which is not folder"
+        )
 
 
 class UntrackedFolderException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Skipped folder not tracked by git"
-        super().__init__(path=path, **kwargs)
+        super().__init__(path=path, message="Skipped folder not tracked by git")
 
 
 class NonExistentFolderException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Skipped path does not exist"
-        super().__init__(path=path, **kwargs)
+        super().__init__(path=path, message="Skipped folder does not exist")
 
 
 class ForbiddenRelativePathException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-        kwargs = {}
-        kwargs["message"] = "Skipped path is forbidden"
-        super().__init__(path=path, **kwargs)
+        super().__init__(path=path, message="Skipped folder is forbidden")
+
+
+class EmptyPathException(SkippedFolderHandlingException):
+    def __init__(self) -> None:
+        super().__init__(path=Path(), message="Skipped folder is an empty string")
+
+    def __str__(self) -> str:
+        return "''"

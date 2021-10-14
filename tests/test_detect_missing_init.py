@@ -22,6 +22,7 @@ from hook.detect_missing_init import (
 from hook.exceptions import (
     AbsolutePathException,
     DuplicatePathException,
+    EmptyPathException,
     ForbiddenRelativePathException,
     NonExistentFolderException,
     NotAFolderException,
@@ -198,6 +199,7 @@ def test_print_missing_init_files(temporary_directory: Path, capsys: CaptureFixt
         ("foo", {Path(".")}, [], [Path("foo")], UntrackedFolderException),
         ("foo", {Path(".")}, [], [], NonExistentFolderException),
         ("..", {Path(".")}, [], [], ForbiddenRelativePathException),
+        ("", {Path(".")}, [], [], EmptyPathException),
     ],
 )
 def test_handle_skipped_folders(
@@ -394,3 +396,10 @@ def test_main_skipped_folders_fail(temporary_directory: Path):
 
     with change_directory(temporary_directory):
         assert 4 == main(["--skip-folders", "foo"])
+
+
+def test_main_skipped_folders_empty_string(temporary_directory: Path):
+    detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
+
+    with change_directory(temporary_directory):
+        assert 4 == main(["--skip-folders", ""])
