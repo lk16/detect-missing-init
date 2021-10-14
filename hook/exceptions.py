@@ -22,7 +22,6 @@ class DuplicatePathException(SkippedFolderHandlingException):
 
 class NotAFolderException(SkippedFolderHandlingException):
     def __init__(self, path: Path) -> None:
-
         super().__init__(
             path=path, message="Skipped folders contains item which is not folder"
         )
