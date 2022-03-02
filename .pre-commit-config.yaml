@@ -39,7 +39,7 @@ repos:
       args: [--ignore-missing-imports]
 
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.1.3
+    rev: v0.1.4
     hooks:
     - id: detect-missing-init
       args: ['--create', '--track']
