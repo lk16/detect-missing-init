@@ -49,6 +49,9 @@ def get_folders_with_tracked_files() -> Set[Path]:
 
 @lru_cache(maxsize=None)
 def contains_python_file(folder: Path) -> bool:
+    if not folder.exists():
+        return False
+
     for file in folder.iterdir():
         if file.is_file() and file.suffix == ".py":
             return True
