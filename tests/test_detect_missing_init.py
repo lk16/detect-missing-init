@@ -2,7 +2,7 @@ import contextlib
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Generator, List, Optional, Set, Type, Union
+from typing import Generator, List, Set
 from unittest.mock import Mock
 
 import pytest
@@ -15,18 +15,8 @@ from hook.detect_missing_init import (
     create_missing_init_files,
     find_missing_init_files,
     get_folders_with_tracked_files,
-    handle_skipped_folders,
     main,
     print_missing_init_files,
-)
-from hook.exceptions import (
-    AbsolutePathException,
-    DuplicatePathException,
-    EmptyPathException,
-    ForbiddenRelativePathException,
-    NonExistentFolderException,
-    NotAFolderException,
-    UntrackedFolderException,
 )
 
 
@@ -179,60 +169,6 @@ def test_print_missing_init_files(
 
     captured = capsys.readouterr()
     assert expected_stdout == captured.out
-
-
-@pytest.mark.parametrize(
-    [
-        "skipped_folders_flag",
-        "folders",
-        "existing_files",
-        "existing_folders",
-        "expected_result",
-    ],
-    [
-        (None, {Path(".")}, [], [], {Path(".")}),
-        ("foo", {Path("."), Path("foo")}, [], [Path("foo")], {Path(".")}),
-        ("/", {Path(".")}, [], [], AbsolutePathException),
-        ("/foo/bar", {Path(".")}, [], [], AbsolutePathException),
-        ("foo.py", {Path(".")}, [Path("foo.py")], [], NotAFolderException),
-        (
-            "foo,foo",
-            {Path("."), Path("foo")},
-            [],
-            [Path("foo")],
-            DuplicatePathException,
-        ),
-        ("foo", {Path(".")}, [], [Path("foo")], UntrackedFolderException),
-        ("foo", {Path(".")}, [], [], NonExistentFolderException),
-        ("..", {Path(".")}, [], [], ForbiddenRelativePathException),
-        ("", {Path(".")}, [], [], EmptyPathException),
-    ],
-)
-def test_handle_skipped_folders(
-    temporary_directory: Path,
-    skipped_folders_flag: Optional[str],
-    folders: Set[Path],
-    existing_files: List[Path],
-    existing_folders: List[Path],
-    expected_result: Union[Set[Path], Type[Exception]],
-) -> None:
-    detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
-
-    for file in existing_files:
-        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
-        Path(temporary_directory / file).touch()
-
-    for folder in existing_folders:
-        Path(temporary_directory / folder).mkdir(parents=True, exist_ok=True)
-
-    with change_directory(temporary_directory):
-        if isinstance(expected_result, type):
-            with pytest.raises(expected_result):
-                handle_skipped_folders(skipped_folders_flag, folders)
-        else:
-            assert expected_result == handle_skipped_folders(
-                skipped_folders_flag, folders
-            )
 
 
 @pytest.mark.parametrize(
@@ -395,17 +331,3 @@ def test_main_expect_root_init(
 
     expected_file_descendants = set(tracked_files)
     assert expected_file_descendants == get_file_descendants(temporary_directory)
-
-
-def test_main_skipped_folders_fail(temporary_directory: Path) -> None:
-    detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
-
-    with change_directory(temporary_directory):
-        assert 4 == main(["--skip-folders", "foo"])
-
-
-def test_main_skipped_folders_empty_string(temporary_directory: Path) -> None:
-    detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
-
-    with change_directory(temporary_directory):
-        assert 4 == main(["--skip-folders", ""])

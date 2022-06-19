@@ -7,17 +7,6 @@ from typing import List, Optional, Set
 
 from git.cmd import Git
 
-from hook.exceptions import (
-    AbsolutePathException,
-    DuplicatePathException,
-    EmptyPathException,
-    ForbiddenRelativePathException,
-    NonExistentFolderException,
-    NotAFolderException,
-    SkippedFolderHandlingException,
-    UntrackedFolderException,
-)
-
 
 def get_untracked_files() -> List[Path]:
     raw_output = Git().ls_files("--others", "--exclude-standard")
@@ -107,63 +96,18 @@ def print_missing_init_files(missing_init_files: Set[Path]) -> None:
         print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
 
 
-def handle_skipped_folders(
-    skipped_folders_flag: Optional[str], folders: Set[Path]
-) -> Set[Path]:
-    if skipped_folders_flag is None:
-        return folders
-
-    repo_root = get_repository_root()
-
-    skipped_folders: Set[Path] = set()
-    for split_flag in skipped_folders_flag.split(","):
-
-        if split_flag == "":
-            raise EmptyPathException()
-
-        path = Path(split_flag)
-
-        if path.is_absolute():
-            raise AbsolutePathException(path)
-
-        try:
-            Path(repo_root).joinpath(path).resolve().relative_to(repo_root.resolve())
-        except ValueError:
-            # prevent directory traverssal attack
-            raise ForbiddenRelativePathException(path)
-
-        if not path.exists():
-            raise NonExistentFolderException(path)
-
-        if not path.is_dir():
-            raise NotAFolderException(path)
-
-        if path not in folders:
-            raise UntrackedFolderException(path)
-
-        if path in skipped_folders:
-            raise DuplicatePathException(path)
-
-        skipped_folders.add(path)
-
-    for skipped_folder in skipped_folders:
-        folders.discard(skipped_folder)
-
-    return folders
-
-
 def main(argv: Optional[List[str]] = None) -> int:
-    if argv is None:
-        argv = sys.argv[1:]
-
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--track", action="store_true")
     parser.add_argument("--expect-root-init", action="store_true")
-    parser.add_argument("--skip-folders", dest="skipped_folders")
+
     parsed_args = parser.parse_args(argv)
 
-    if parsed_args.track and not parsed_args.create:
+    flag_track: bool = parsed_args.track
+    flag_create: bool = parsed_args.create
+
+    if flag_track and not flag_create:
         print("--track requires --create")
         return 3
 
@@ -172,16 +116,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not parsed_args.expect_root_init:
         folders.discard(Path("."))
 
-    try:
-        folders = handle_skipped_folders(parsed_args.skipped_folders, folders)
-    except SkippedFolderHandlingException as e:
-        print(str(e), file=sys.stderr)
-        return 4
-
     missing_init_files = find_missing_init_files(folders)
 
-    if parsed_args.create:
-        create_missing_init_files(missing_init_files, parsed_args.track)
+    if flag_create:
+        create_missing_init_files(missing_init_files, flag_track)
     else:
         print_missing_init_files(missing_init_files)
 
@@ -195,4 +133,4 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 
 if __name__ == "__main__":
-    exit(main())
+    exit(main(sys.argv[1:]))
