@@ -2,7 +2,7 @@ import contextlib
 import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import List, Optional, Set, Type, Union
+from typing import Generator, List, Optional, Set, Type, Union
 from unittest.mock import Mock
 
 import pytest
@@ -31,18 +31,18 @@ from hook.exceptions import (
 
 
 @pytest.fixture()
-def temporary_directory():
+def temporary_directory() -> Generator[Path, None, None]:
     with TemporaryDirectory() as dir:
         yield Path(dir)
 
 
 @pytest.fixture(autouse=True)
-def clear_contains_pyton_file_cache():
+def clear_contains_pyton_file_cache() -> None:
     contains_python_file.cache_clear()
 
 
 @contextlib.contextmanager
-def change_directory(dir: Path):
+def change_directory(dir: Path) -> Generator[None, None, None]:
     old_dir = Path.cwd()
     os.chdir(dir)
     yield
@@ -67,7 +67,9 @@ def get_file_descendants(dir: Path) -> Set[Path]:
         ([Path("a/b/foo.py")], {Path("."), Path("a"), Path("a/b")}),
     ],
 )
-def test_get_folders_with_tracked_files(tracked_files: List[Path], folders: Set[Path]):
+def test_get_folders_with_tracked_files(
+    tracked_files: List[Path], folders: Set[Path]
+) -> None:
     detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
     assert get_folders_with_tracked_files() == folders
 
@@ -85,7 +87,7 @@ def test_get_folders_with_tracked_files(tracked_files: List[Path], folders: Set[
 )
 def test_contains_python_file(
     temporary_directory: Path, files: List[str], expected_value: bool
-):
+) -> None:
     for file in files:
         Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
         Path(temporary_directory / file).touch()
@@ -105,7 +107,7 @@ def test_contains_python_file(
 )
 def test_check_all_init_files_tracked(
     untracked_files: List[Path], expected_value: bool
-):
+) -> None:
     detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
     assert expected_value == check_all_init_files_tracked()
 
@@ -127,7 +129,7 @@ def test_find_missing_init_files(
     folders: List[Path],
     files: List[Path],
     expected_value: Set[Path],
-):
+) -> None:
     for folder in folders:
         Path(temporary_directory / folder).mkdir(parents=True, exist_ok=True)
 
@@ -141,7 +143,9 @@ def test_find_missing_init_files(
     assert resolved_expected_value == find_missing_init_files(resolved_folders)
 
 
-def test_create_missing_init_files(temporary_directory: Path, capsys: CaptureFixture):
+def test_create_missing_init_files(
+    temporary_directory: Path, capsys: CaptureFixture[str]
+) -> None:
     files = {Path("__init__.py"), Path("foo/__init__.py")}
     Path(temporary_directory / "foo").mkdir(parents=True, exist_ok=True)
 
@@ -155,7 +159,9 @@ def test_create_missing_init_files(temporary_directory: Path, capsys: CaptureFix
     assert captured.out == "Created 2 missing __init__.py file(s).\n"
 
 
-def test_print_missing_init_files(temporary_directory: Path, capsys: CaptureFixture):
+def test_print_missing_init_files(
+    temporary_directory: Path, capsys: CaptureFixture[str]
+) -> None:
     files = {Path("__init__.py"), Path("foo/__init__.py")}
     Path(temporary_directory / "foo").mkdir(parents=True, exist_ok=True)
 
@@ -209,7 +215,7 @@ def test_handle_skipped_folders(
     existing_files: List[Path],
     existing_folders: List[Path],
     expected_result: Union[Set[Path], Type[Exception]],
-):
+) -> None:
     detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
 
     for file in existing_files:
@@ -250,7 +256,7 @@ def test_main_default(
     tracked_files: List[Path],
     untracked_files: List[Path],
     expected_exit_code: int,
-):
+) -> None:
     detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
     detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
 
@@ -286,7 +292,7 @@ def test_main_create(
     tracked_files: List[Path],
     untracked_files: List[Path],
     expected_exit_code: int,
-):
+) -> None:
     detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
     detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
 
@@ -301,7 +307,7 @@ def test_main_create(
     assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
-def test_main_track_without_create():
+def test_main_track_without_create() -> None:
     assert 3 == main(["--track"])
 
 
@@ -327,7 +333,7 @@ def test_main_track(
     untracked_files: List[Path],
     expected_exit_code: int,
     newly_tracked_files: Set[Path],
-):
+) -> None:
     detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
     detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
     detect_missing_init.track_files = Mock()
@@ -376,7 +382,7 @@ def test_main_expect_root_init(
     temporary_directory: Path,
     tracked_files: List[Path],
     expected_exit_code: int,
-):
+) -> None:
     detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
     detect_missing_init.get_untracked_files = Mock(return_value=[])
 
@@ -391,14 +397,14 @@ def test_main_expect_root_init(
     assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
-def test_main_skipped_folders_fail(temporary_directory: Path):
+def test_main_skipped_folders_fail(temporary_directory: Path) -> None:
     detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
 
     with change_directory(temporary_directory):
         assert 4 == main(["--skip-folders", "foo"])
 
 
-def test_main_skipped_folders_empty_string(temporary_directory: Path):
+def test_main_skipped_folders_empty_string(temporary_directory: Path) -> None:
     detect_missing_init.get_repository_root = Mock(return_value=temporary_directory)
 
     with change_directory(temporary_directory):

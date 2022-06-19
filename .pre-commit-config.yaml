@@ -32,11 +32,13 @@ repos:
       - id: mixed-line-ending
         args: ['--fix=lf']
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.790
+  - repo: local
     hooks:
-    - id: mypy
-      args: [--ignore-missing-imports]
+      - id: mypy
+        name: run mypy
+        language: system
+        entry: poetry run mypy --strict --ignore-missing-imports
+        types: [python]
 
   - repo: https://github.com/lk16/detect-missing-init
     rev: v0.1.4
