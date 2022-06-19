@@ -243,10 +243,6 @@ def test_main_create(
     assert expected_file_descendants == get_file_descendants(temporary_directory)
 
 
-def test_main_track_without_create() -> None:
-    assert 3 == main(["--track"])
-
-
 @pytest.mark.parametrize(
     ["tracked_files", "untracked_files", "expected_exit_code", "newly_tracked_files"],
     [

@@ -104,12 +104,10 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     parsed_args = parser.parse_args(argv)
 
-    flag_track: bool = parsed_args.track
     flag_create: bool = parsed_args.create
 
-    if flag_track and not flag_create:
-        print("--track requires --create")
-        return 3
+    # --create implies --track
+    flag_track: bool = parsed_args.track or parsed_args.create
 
     folders = get_folders_with_tracked_files()
 
