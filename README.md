@@ -23,9 +23,9 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 Without arguments the hook just reports missing files without making any changes.
 This is a design choice: the user should opt-in for any behavior other than the basic check for missing files.
 
+* `--python-folders foo,bar/baz`: Required flag. Value should be a comma separated lists to of paths to be checked for missing `__init__.py` files. Paths should be relative to the repostiory root.
 * `--create`: create the missing `__init__.py` files.
 * `--track`: runs `git add` on all created `__init__.py` files. Implies `--create`.
-* `--python-folders foo,bar/baz`: check these folders and their descendants for missing `__init__.py` files. This flag should be followed by a comma-separated list of paths to folders. All listed folders should be relative to the repository root.
 
 ### Why?
 Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.
