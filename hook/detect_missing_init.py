@@ -62,11 +62,19 @@ def contains_python_file(folder: Path) -> bool:
     return False
 
 
-def find_missing_init_files(folders: Set[Path]) -> Set[Path]:
+def find_missing_init_files(folders: Set[Path], python_folders: Set[Path]) -> Set[Path]:
     missing_init_files: Set[Path] = set()
+
     for folder in folders:
         init_path = folder / "__init__.py"
-        if not init_path.exists() and contains_python_file(folder):
+
+        if all(
+            [
+                not init_path.exists(),
+                contains_python_file(folder),
+                set(init_path.parents) & python_folders,
+            ]
+        ):
             missing_init_files.add(init_path)
 
     return missing_init_files
@@ -88,50 +96,41 @@ def check_all_init_files_tracked() -> bool:
     return True
 
 
-def create_missing_init_files(missing_init_files: Set[Path], track: bool) -> None:
-    for file in missing_init_files:
-        file.touch()
-
-    if missing_init_files:
-        if track:
-            track_files(missing_init_files)
-            print(f"Added {len(missing_init_files)} missing __init__.py file(s).")
-        else:
-            print(f"Created {len(missing_init_files)} missing __init__.py file(s).")
-
-
-def print_missing_init_files(missing_init_files: Set[Path]) -> None:
-    for file in sorted(missing_init_files):
-        print(file.resolve())
-
-    if missing_init_files:
-        print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
-
-
 def main(argv: Optional[List[str]] = None) -> int:
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--track", action="store_true")
-    parser.add_argument("--expect-root-init", action="store_true")
+    parser.add_argument("--python-folders", dest="python_folders", required=True)
 
     parsed_args = parser.parse_args(argv)
 
     flag_create: bool = parsed_args.create
+    flag_python_folders: str = parsed_args.python_folders
 
     # --create implies --track
     flag_track: bool = parsed_args.track or parsed_args.create
 
-    folders = get_folders_with_tracked_files()
+    python_folders: Set[Path] = {
+        Path(folder) for folder in flag_python_folders.split(",")
+    }
 
-    if not parsed_args.expect_root_init:
-        folders.discard(Path("."))
+    folders_with_tracked_files = get_folders_with_tracked_files()
 
-    missing_init_files = find_missing_init_files(folders)
+    missing_init_files = find_missing_init_files(
+        folders_with_tracked_files, python_folders
+    )
 
     if flag_create:
-        create_missing_init_files(missing_init_files, flag_track)
-    else:
-        print_missing_init_files(missing_init_files)
+        for file in missing_init_files:
+            file.touch()
+
+    if flag_track:
+        track_files(missing_init_files)
+
+    for file in sorted(missing_init_files):
+        print(file.resolve())
+
+    print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
 
     if missing_init_files:
         return 1
