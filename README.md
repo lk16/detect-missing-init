@@ -13,7 +13,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
 
 ```yaml
   - repo: https://github.com/lk16/detect-missing-init
-    rev: v0.1.4
+    rev: v0.1.5
     hooks:
     - id: detect-missing-init
       args: ['--create', "--track"]  # See the arguments section
