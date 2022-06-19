@@ -15,7 +15,7 @@ repos:
       - id: isort
 
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 22.3.0
     hooks:
       - id: black
 
@@ -44,4 +44,4 @@ repos:
     rev: v0.1.5
     hooks:
     - id: detect-missing-init
-      args: ['--create', '--track']
+      args: ['--create', '--track', '--python-folders', 'hook,tests']
