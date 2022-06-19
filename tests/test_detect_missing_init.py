@@ -99,26 +99,41 @@ def test_check_all_init_files_tracked(
     untracked_files: List[Path], expected_value: bool
 ) -> None:
     detect_missing_init.get_untracked_files = Mock(return_value=untracked_files)
-    assert expected_value == check_all_init_files_tracked()
+    python_folders = {Path(".")}
+    assert expected_value == check_all_init_files_tracked(python_folders)
 
 
 @pytest.mark.parametrize(
-    ["folders", "files", "expected_value"],
+    ["folders", "files", "python_folders", "expected_missing_init_files"],
     [
-        ([], [], {}),
-        ([Path(".")], [Path("foo.py")], {Path("__init__.py")}),
+        ([], set(), set(), set()),
+        ([Path(".")], {Path("foo.py")}, {Path(".")}, {Path("__init__.py")}),
         (
             [Path("."), Path("foo")],
-            [Path("foo/bar.py")],
+            {Path("foo/bar.py")},
+            {Path(".")},
             {Path("__init__.py"), Path("foo/__init__.py")},
+        ),
+        (
+            [Path("."), Path("foo")],
+            {Path("foo/bar.py")},
+            {Path("foo")},
+            {Path("foo/__init__.py")},
+        ),
+        (
+            [Path("."), Path("foo")],
+            {Path("foo/bar.py")},
+            {Path("baz")},
+            set(),
         ),
     ],
 )
 def test_find_missing_init_files(
     temporary_directory: Path,
-    folders: List[Path],
+    folders: Set[Path],
     files: List[Path],
-    expected_value: Set[Path],
+    python_folders: Set[Path],
+    expected_missing_init_files: Set[Path],
 ) -> None:
     for folder in folders:
         Path(temporary_directory / folder).mkdir(parents=True, exist_ok=True)
@@ -126,11 +141,10 @@ def test_find_missing_init_files(
     for file in files:
         Path(temporary_directory / file).touch()
 
-    resolved_folders = {Path(temporary_directory / folder) for folder in folders}
-    resolved_expected_value = {
-        Path(temporary_directory / folder) for folder in expected_value
-    }
-    assert resolved_expected_value == find_missing_init_files(resolved_folders)
+    with change_directory(temporary_directory):
+        assert expected_missing_init_files == find_missing_init_files(
+            folders, python_folders
+        )
 
 
 def test_create_missing_init_files(
@@ -172,23 +186,35 @@ def test_print_missing_init_files(
 
 
 @pytest.mark.parametrize(
-    ["tracked_files", "untracked_files", "expected_exit_code"],
+    ["python_folders", "tracked_files", "untracked_files", "expected_exit_code"],
     [
-        ([], [], 0),
-        ([Path("foo.py")], [], 0),
-        ([Path("foo.bar")], [], 0),
-        ([Path("a/foo.py")], [], 1),
-        ([Path("a/b/foo.py")], [], 1),
-        ([Path("a/b/foo.bar")], [], 0),
-        ([], [Path("__init__.py")], 2),
-        ([], [Path("a/__init__.py")], 2),
-        ([], [Path("a/b/__init__.py")], 2),
-        ([], [Path("foo.bar")], 0),
-        ([], [Path("a/b/foo.bar")], 0),
+        (".", [], [], 0),
+        (".", [Path("foo.py")], [], 1),
+        ("bar", [Path("foo.py")], [], 0),
+        (".", [Path("foo.bar")], [], 0),
+        ("bar", [Path("foo.bar")], [], 0),
+        (".", [Path("a/foo.py")], [], 1),
+        ("a", [Path("a/foo.py")], [], 1),
+        (".", [Path("a/b/foo.py")], [], 1),
+        ("a", [Path("a/b/foo.py")], [], 1),
+        ("a/b", [Path("a/b/foo.py")], [], 1),
+        ("c,.", [Path("a/b/foo.py")], [], 1),
+        ("c,a", [Path("a/b/foo.py")], [], 1),
+        ("c,a/b", [Path("a/b/foo.py")], [], 1),
+        (".", [Path("a/b/foo.bar")], [], 0),
+        ("a", [Path("a/b/foo.bar")], [], 0),
+        ("a/b", [Path("a/b/foo.bar")], [], 0),
+        (".", [], [Path("__init__.py")], 2),
+        (".", [], [Path("a/__init__.py")], 2),
+        (".", [], [Path("a/b/__init__.py")], 2),
+        (".", [], [Path("foo.bar")], 0),
+        (".", [], [Path("a/b/foo.bar")], 0),
+        ("a", [], [Path("b/__init__.py")], 0),
     ],
 )
 def test_main_default(
     temporary_directory: Path,
+    python_folders: str,
     tracked_files: List[Path],
     untracked_files: List[Path],
     expected_exit_code: int,
@@ -201,7 +227,7 @@ def test_main_default(
         Path(temporary_directory / file).touch()
 
     with change_directory(temporary_directory):
-        assert expected_exit_code == main([])
+        assert expected_exit_code == main(["--python-folders", python_folders])
 
     expected_file_descendants = set(tracked_files + untracked_files)
     assert expected_file_descendants == get_file_descendants(temporary_directory)
@@ -216,7 +242,6 @@ def test_main_default(
         ([Path("a/foo.py")], [Path("a/__init__.py")], 2),
         ([Path("a/b/foo.py")], [Path("a/__init__.py"), Path("a/b/__init__.py")], 2),
         ([Path("a/b/foo.bar")], [], 0),
-        ([], [Path("__init__.py")], 2),
         ([], [Path("a/__init__.py")], 2),
         ([], [Path("a/b/__init__.py")], 2),
         ([], [Path("foo.bar")], 0),
@@ -237,7 +262,7 @@ def test_main_create(
         Path(temporary_directory / file).touch()
 
     with change_directory(temporary_directory):
-        assert expected_exit_code == main(["--create"])
+        assert expected_exit_code == main(["--create", "--python-folders", "a"])
 
     expected_file_descendants = set(tracked_files + untracked_files)
     assert expected_file_descendants == get_file_descendants(temporary_directory)
@@ -252,7 +277,6 @@ def test_main_create(
         ([Path("a/foo.py")], [], 1, {Path("a/__init__.py")}),
         ([Path("a/b/foo.py")], [], 1, {Path("a/__init__.py"), Path("a/b/__init__.py")}),
         ([Path("a/b/foo.bar")], [], 0, set()),
-        ([], [Path("__init__.py")], 2, set()),
         ([], [Path("a/__init__.py")], 2, set()),
         ([], [Path("a/b/__init__.py")], 2, set()),
         ([], [Path("foo.bar")], 0, set()),
@@ -275,7 +299,9 @@ def test_main_track(
         Path(temporary_directory / file).touch()
 
     with change_directory(temporary_directory):
-        assert expected_exit_code == main(["--create", "--track"])
+        assert expected_exit_code == main(
+            ["--create", "--track", "--python-folders", "a"]
+        )
 
     if newly_tracked_files:
         detect_missing_init.track_files.assert_called_with(newly_tracked_files)

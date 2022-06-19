@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Set
 
 
-def run_command(command: str) -> List[str]:
+def run_command(command: str) -> List[str]:  # pragma: nocover
     process = subprocess.run(
         command,
         shell=True,
@@ -24,17 +24,17 @@ def run_command(command: str) -> List[str]:
     return [line for line in raw_output.strip().split("\n")]
 
 
-def get_untracked_files() -> List[Path]:
+def get_untracked_files() -> List[Path]:  # pragma: nocover
     output_lines = run_command("git ls-files --others --exclude-standard")
     return [Path(line).resolve() for line in output_lines]
 
 
-def track_files(files: Set[Path]) -> None:
+def track_files(files: Set[Path]) -> None:  # pragma: nocover
     command = "git add " + " ".join(shlex.quote(str(file)) for file in files)
     run_command(command)
 
 
-def get_tracked_files() -> List[Path]:
+def get_tracked_files() -> List[Path]:  # pragma: nocover
     output_lines = run_command("git ls-files")
     return [Path(line) for line in output_lines]
 
@@ -50,8 +50,7 @@ def get_folders_with_tracked_files() -> Set[Path]:
 
 @lru_cache(maxsize=None)
 def contains_python_file(folder: Path) -> bool:
-    if not folder.exists():
-        return False
+    assert folder.exists()
 
     for file in folder.iterdir():
         if file.is_file() and file.suffix == ".py":
@@ -80,11 +79,11 @@ def find_missing_init_files(folders: Set[Path], python_folders: Set[Path]) -> Se
     return missing_init_files
 
 
-def check_all_init_files_tracked() -> bool:
+def check_all_init_files_tracked(python_folders: Set[Path]) -> bool:
     untracked_init_files: List[Path] = []
 
     for file in get_untracked_files():
-        if file.name == "__init__.py":
+        if file.name == "__init__.py" and set(file.parents) & python_folders:
             untracked_init_files.append(file)
 
     if untracked_init_files:
@@ -96,6 +95,26 @@ def check_all_init_files_tracked() -> bool:
     return True
 
 
+def create_missing_init_files(missing_init_files: Set[Path], track: bool) -> None:
+    for file in missing_init_files:
+        file.touch()
+
+    if missing_init_files:
+        if track:
+            track_files(missing_init_files)
+            print(f"Added {len(missing_init_files)} missing __init__.py file(s).")
+        else:
+            print(f"Created {len(missing_init_files)} missing __init__.py file(s).")
+
+
+def print_missing_init_files(missing_init_files: Set[Path]) -> None:
+    for file in sorted(missing_init_files):
+        print(file.resolve())
+
+    if missing_init_files:
+        print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
@@ -104,11 +123,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     parsed_args = parser.parse_args(argv)
 
-    flag_create: bool = parsed_args.create
+    flag_create: bool = parsed_args.create or parsed_args.track  # track implies create
+    flag_track: bool = parsed_args.track
     flag_python_folders: str = parsed_args.python_folders
-
-    # --create implies --track
-    flag_track: bool = parsed_args.track or parsed_args.create
 
     python_folders: Set[Path] = {
         Path(folder) for folder in flag_python_folders.split(",")
@@ -121,25 +138,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
 
     if flag_create:
-        for file in missing_init_files:
-            file.touch()
-
-    if flag_track:
-        track_files(missing_init_files)
-
-    for file in sorted(missing_init_files):
-        print(file.resolve())
-
-    print(f"Found {len(missing_init_files)} missing __init__.py file(s).")
+        create_missing_init_files(missing_init_files, flag_track)
+    else:
+        print_missing_init_files(missing_init_files)
 
     if missing_init_files:
         return 1
 
-    if not check_all_init_files_tracked():
+    if not check_all_init_files_tracked(python_folders):
         return 2
 
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: nocover
     exit(main(sys.argv[1:]))
