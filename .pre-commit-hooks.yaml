@@ -5,4 +5,4 @@
   language: python
   always_run: true
   require_serial: true
-  files: '.*.py'
+  pass_filenames: false
