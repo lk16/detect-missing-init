@@ -1,30 +1,42 @@
 #!/usr/bin/env python
+import shlex
+import subprocess
 import sys
 from argparse import ArgumentParser
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Set
 
-from git.cmd import Git
+
+def run_command(command: str) -> List[str]:
+    process = subprocess.run(
+        command,
+        shell=True,
+        capture_output=True,
+        check=True,
+    )
+
+    raw_output = process.stdout.decode("utf-8")
+
+    if not raw_output:
+        return []
+
+    return [line for line in raw_output.strip().split("\n")]
 
 
 def get_untracked_files() -> List[Path]:
-    raw_output = Git().ls_files("--others", "--exclude-standard")
-    return [Path(file).resolve() for file in raw_output.strip().split("\n")]
+    output_lines = run_command("git ls-files --others --exclude-standard")
+    return [Path(line).resolve() for line in output_lines]
 
 
 def track_files(files: Set[Path]) -> None:
-    Git().add(*list(files))
+    command = "git add " + " ".join(shlex.quote(str(file)) for file in files)
+    run_command(command)
 
 
 def get_tracked_files() -> List[Path]:
-    raw_output = Git().ls_files()
-    return [Path(file) for file in raw_output.strip().split("\n")]
-
-
-def get_repository_root() -> Path:
-    raw_output = Git().rev_parse("--show-toplevel")
-    return Path(raw_output)
+    output_lines = run_command("git ls-files")
+    return [Path(line) for line in output_lines]
 
 
 def get_folders_with_tracked_files() -> Set[Path]:
