@@ -16,7 +16,7 @@ Optionally run `pre-commit run --all-files` to check if the hook finds any probl
     rev: v0.1.5
     hooks:
     - id: detect-missing-init
-      args: ['--create', "--track"]  # See the arguments section
+      args: ['--create', "--track", "--python-folders", "tests,somefolder,otherfolder"]  # See the arguments section
 ```
 
 ### Arguments
