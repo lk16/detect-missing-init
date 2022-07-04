@@ -67,12 +67,10 @@ def find_missing_init_files(folders: Set[Path], python_folders: Set[Path]) -> Se
     for folder in folders:
         init_path = folder / "__init__.py"
 
-        if all(
-            [
-                not init_path.exists(),
-                contains_python_file(folder),
-                set(init_path.parents) & python_folders,
-            ]
+        if (
+            not init_path.exists()
+            and set(init_path.parents) & python_folders
+            and contains_python_file(folder)
         ):
             missing_init_files.add(init_path)
 
