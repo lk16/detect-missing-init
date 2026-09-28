@@ -77,39 +77,46 @@ def find_missing_init_files(folders: Set[Path], python_folders: Set[Path]) -> Se
     return missing_init_files
 
 
-def find_redundant_init_files(
-    folders: Set[Path], python_folders: Set[Path]
+def is_redundant_init_file(init_path: Path, python_folders: Set[Path]) -> bool:
+    return bool(
+        init_path.is_file()
+        and set(init_path.parents) & python_folders
+        and not init_path.read_text().strip()
+        and not any(
+            file != init_path
+            and (file.suffix == ".py" or file.is_dir())
+            and file.name != "__pycache__"
+            for file in init_path.parent.iterdir()
+        )
+    )
+
+
+def remove_redundant_init_files(
+    folders: Set[Path], python_folders: Set[Path], track: bool
 ) -> Set[Path]:
     redundant_init_files: Set[Path] = set()
 
-    for folder in folders:
+    # deepest first, so removing a subfolder can make its parent redundant
+    for folder in sorted(folders, key=lambda folder: len(folder.parts), reverse=True):
         init_path = folder / "__init__.py"
 
-        if (
-            init_path.is_file()
-            and set(init_path.parents) & python_folders
-            and not init_path.read_text().strip()
-            and not any(
-                file != init_path
-                and (file.suffix == ".py" or file.is_dir())
-                and file.name != "__pycache__"
-                for file in folder.iterdir()
-            )
-        ):
+        if is_redundant_init_file(init_path, python_folders):
+            init_path.unlink()
+            if folder != Path(".") and not any(folder.iterdir()):
+                folder.rmdir()
             redundant_init_files.add(init_path)
 
-    return redundant_init_files
-
-
-def remove_redundant_init_files(redundant_init_files: Set[Path]) -> None:
     for file in sorted(redundant_init_files):
         print(file.resolve())
-        file.unlink()
-        if file.parent != Path(".") and not any(file.parent.iterdir()):
-            file.parent.rmdir()
 
     if redundant_init_files:
+        if track:
+            tracked_files = redundant_init_files & set(get_tracked_files())
+            if tracked_files:
+                track_files(tracked_files)
         print(f"Removed {len(redundant_init_files)} redundant __init__.py file(s).")
+
+    return redundant_init_files
 
 
 def check_all_init_files_tracked(python_folders: Set[Path]) -> bool:
@@ -170,10 +177,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     redundant_init_files: Set[Path] = set()
     if flag_remove_redundant:
-        redundant_init_files = find_redundant_init_files(
-            folders_with_tracked_files, python_folders
+        redundant_init_files = remove_redundant_init_files(
+            folders_with_tracked_files, python_folders, flag_track
         )
-        remove_redundant_init_files(redundant_init_files)
         folders_with_tracked_files = {
             folder for folder in folders_with_tracked_files if folder.exists()
         }

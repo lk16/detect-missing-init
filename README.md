@@ -26,7 +26,7 @@ This is a design choice: the user should opt-in for any behavior other than the 
 * `--python-folders foo,bar/baz`: Required flag. Value should be a comma separated lists to of paths to be checked for missing `__init__.py` files. Paths should be relative to the repostiory root. To add the repo root to this list use `.`.
 * `--create`: create the missing `__init__.py` files.
 * `--track`: runs `git add` on all created `__init__.py` files. Implies `--create`.
-* `--remove-redundant`: removes empty `__init__.py` files in folders without other python files or subfolders. If the folder is empty afterwards, it is removed too. Exits with code 3 when files were removed.
+* `--remove-redundant`: removes empty `__init__.py` files in folders without other python files or subfolders. If the folder is empty afterwards, it is removed too, which can make the parent folder's `__init__.py` redundant as well. Combined with `--track`, the removals are staged. Exits with code 3 when files were removed.
 
 ### Why?
 Since python 3.3 [implicit namespace packages](https://stackoverflow.com/questions/37139786/is-init-py-not-required-for-packages-in-python-3-3) are supported.

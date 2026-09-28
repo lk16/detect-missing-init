@@ -14,8 +14,8 @@ from hook.detect_missing_init import (
     contains_python_file,
     create_missing_init_files,
     find_missing_init_files,
-    find_redundant_init_files,
     get_folders_with_tracked_files,
+    is_redundant_init_file,
     main,
     print_missing_init_files,
     remove_redundant_init_files,
@@ -150,87 +150,138 @@ def test_find_missing_init_files(
 
 
 @pytest.mark.parametrize(
-    ["files", "python_folders", "expected_redundant_init_files"],
+    ["files", "python_folders", "expected_value"],
     [
-        ([], {Path(".")}, set()),
-        ([Path("a/__init__.py")], {Path(".")}, {Path("a/__init__.py")}),
-        ([Path("a/__init__.py")], {Path("a")}, {Path("a/__init__.py")}),
-        ([Path("a/__init__.py")], {Path("b")}, set()),
-        (
-            [Path("a/__init__.py"), Path("a/data.json")],
-            {Path(".")},
-            {Path("a/__init__.py")},
-        ),
+        ([], {Path(".")}, False),
+        ([Path("a/__init__.py")], {Path(".")}, True),
+        ([Path("a/__init__.py")], {Path("a")}, True),
+        ([Path("a/__init__.py")], {Path("b")}, False),
+        ([Path("a/__init__.py"), Path("a/data.json")], {Path(".")}, True),
         (
             [Path("a/__init__.py"), Path("a/__pycache__/__init__.cpython-38.pyc")],
             {Path(".")},
-            {Path("a/__init__.py")},
+            True,
         ),
-        ([Path("a/__init__.py"), Path("a/foo.py")], {Path(".")}, set()),
-        ([Path("a/__init__.py"), Path("a/b/foo.bar")], {Path(".")}, set()),
+        ([Path("a/__init__.py"), Path("a/foo.py")], {Path(".")}, False),
+        ([Path("a/__init__.py"), Path("a/b/foo.bar")], {Path(".")}, False),
     ],
 )
-def test_find_redundant_init_files(
+def test_is_redundant_init_file(
     temporary_directory: Path,
     files: List[Path],
     python_folders: Set[Path],
-    expected_redundant_init_files: Set[Path],
+    expected_value: bool,
 ) -> None:
+    Path(temporary_directory / "a").mkdir()
+
     for file in files:
         Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
         Path(temporary_directory / file).touch()
 
-    folders = {file.parent for file in files}
-
     with change_directory(temporary_directory):
-        assert expected_redundant_init_files == find_redundant_init_files(
-            folders, python_folders
+        assert expected_value == is_redundant_init_file(
+            Path("a/__init__.py"), python_folders
         )
 
 
-def test_find_redundant_init_files_non_empty(temporary_directory: Path) -> None:
+@pytest.mark.parametrize(
+    ["content", "expected_value"],
+    [
+        ("", True),
+        ("\n  \n", True),
+        ("x = 1\n", False),
+    ],
+)
+def test_is_redundant_init_file_content(
+    temporary_directory: Path, content: str, expected_value: bool
+) -> None:
     Path(temporary_directory / "a").mkdir()
-    Path(temporary_directory / "a/__init__.py").write_text("x = 1\n")
+    Path(temporary_directory / "a/__init__.py").write_text(content)
 
     with change_directory(temporary_directory):
-        assert set() == find_redundant_init_files({Path("a")}, {Path(".")})
-
-
-def test_find_redundant_init_files_whitespace_only(temporary_directory: Path) -> None:
-    Path(temporary_directory / "a").mkdir()
-    Path(temporary_directory / "a/__init__.py").write_text("\n  \n")
-
-    with change_directory(temporary_directory):
-        assert {Path("a/__init__.py")} == find_redundant_init_files(
-            {Path("a")}, {Path(".")}
+        assert expected_value == is_redundant_init_file(
+            Path("a/__init__.py"), {Path(".")}
         )
 
 
 def test_remove_redundant_init_files(
     temporary_directory: Path, capsys: CaptureFixture[str]
 ) -> None:
-    Path(temporary_directory / "a").mkdir()
-    Path(temporary_directory / "b").mkdir()
-    Path(temporary_directory / "a/__init__.py").touch()
-    Path(temporary_directory / "b/__init__.py").touch()
-    Path(temporary_directory / "b/data.json").touch()
-    Path(temporary_directory / "__init__.py").touch()
-    files = {Path("__init__.py"), Path("a/__init__.py"), Path("b/__init__.py")}
+    for name in ["__init__.py", "a/__init__.py", "b/__init__.py", "b/data.json"]:
+        Path(temporary_directory / name).parent.mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / name).touch()
+
+    folders = {Path("."), Path("a"), Path("b")}
+    removed_files = {Path("a/__init__.py"), Path("b/__init__.py")}
 
     with change_directory(temporary_directory):
-        remove_redundant_init_files(files)
+        assert removed_files == remove_redundant_init_files(folders, {Path(".")}, False)
 
-    assert temporary_directory.exists()
     assert not Path(temporary_directory / "a").exists()
-    assert {Path("b/data.json")} == get_file_descendants(temporary_directory)
+    assert {Path("__init__.py"), Path("b/data.json")} == get_file_descendants(
+        temporary_directory
+    )
 
     expected_stdout = ""
-    for file in sorted(files):
+    for file in sorted(removed_files):
         expected_stdout += str(Path(temporary_directory / file).resolve()) + "\n"
-    expected_stdout += "Removed 3 redundant __init__.py file(s).\n"
+    expected_stdout += "Removed 2 redundant __init__.py file(s).\n"
 
     captured = capsys.readouterr()
     assert expected_stdout == captured.out
+
+
+def test_remove_redundant_init_files_cascade(temporary_directory: Path) -> None:
+    for file in [
+        "__init__.py",
+        "a/__init__.py",
+        "a/b/__init__.py",
+        "a/b/c/__init__.py",
+    ]:
+        Path(temporary_directory / file).parent.mkdir(parents=True, exist_ok=True)
+        Path(temporary_directory / file).touch()
+
+    folders = {Path("."), Path("a"), Path("a/b"), Path("a/b/c")}
+
+    with change_directory(temporary_directory):
+        assert {
+            Path("__init__.py"),
+            Path("a/__init__.py"),
+            Path("a/b/__init__.py"),
+            Path("a/b/c/__init__.py"),
+        } == remove_redundant_init_files(folders, {Path(".")}, False)
+
+    assert temporary_directory.exists()
+    assert [] == list(temporary_directory.iterdir())
+
+
+@pytest.mark.parametrize(
+    ["tracked_files", "newly_tracked_files"],
+    [
+        ([Path("a/__init__.py")], {Path("a/__init__.py")}),
+        ([Path("a/data.json")], set()),
+        ([], set()),
+    ],
+)
+def test_remove_redundant_init_files_track(
+    temporary_directory: Path,
+    tracked_files: List[Path],
+    newly_tracked_files: Set[Path],
+) -> None:
+    detect_missing_init.get_tracked_files = Mock(return_value=tracked_files)
+    detect_missing_init.track_files = Mock()
+
+    Path(temporary_directory / "a").mkdir()
+    Path(temporary_directory / "a/__init__.py").touch()
+    Path(temporary_directory / "a/data.json").touch()
+
+    with change_directory(temporary_directory):
+        remove_redundant_init_files({Path("a")}, {Path(".")}, True)
+
+    if newly_tracked_files:
+        detect_missing_init.track_files.assert_called_with(newly_tracked_files)
+    else:
+        detect_missing_init.track_files.assert_not_called()
 
 
 def test_create_missing_init_files(
@@ -417,13 +468,19 @@ def test_main_track(
             "a",
             [Path("a/__init__.py"), Path("a/b/__init__.py")],
             3,
-            {Path("a/__init__.py")},
+            set(),
+        ),
+        (
+            "a",
+            [Path("a/__init__.py"), Path("a/b/__init__.py"), Path("a/b/c.txt")],
+            3,
+            {Path("a/__init__.py"), Path("a/b/c.txt")},
         ),
         (
             ".",
             [Path("__init__.py"), Path("a/__init__.py")],
             3,
-            {Path("__init__.py")},
+            set(),
         ),
     ],
 )
