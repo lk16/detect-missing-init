@@ -77,6 +77,48 @@ def find_missing_init_files(folders: Set[Path], python_folders: Set[Path]) -> Se
     return missing_init_files
 
 
+def is_redundant_init_file(init_path: Path, python_folders: Set[Path]) -> bool:
+    return bool(
+        init_path.is_file()
+        and set(init_path.parents) & python_folders
+        and not init_path.read_text().strip()
+        and not any(
+            file != init_path
+            and (file.suffix == ".py" or file.is_dir())
+            and file.name not in ("__pycache__", ".git")
+            for file in init_path.parent.iterdir()
+        )
+    )
+
+
+def remove_redundant_init_files(
+    folders: Set[Path], python_folders: Set[Path], track: bool
+) -> Set[Path]:
+    redundant_init_files: Set[Path] = set()
+
+    # deepest first, so removing a subfolder can make its parent redundant
+    for folder in sorted(folders, key=lambda folder: len(folder.parts), reverse=True):
+        init_path = folder / "__init__.py"
+
+        if is_redundant_init_file(init_path, python_folders):
+            init_path.unlink()
+            if folder != Path(".") and not any(folder.iterdir()):
+                folder.rmdir()
+            redundant_init_files.add(init_path)
+
+    for file in sorted(redundant_init_files):
+        print(file.resolve())
+
+    if redundant_init_files:
+        if track:
+            tracked_files = redundant_init_files & set(get_tracked_files())
+            if tracked_files:
+                track_files(tracked_files)
+        print(f"Removed {len(redundant_init_files)} redundant __init__.py file(s).")
+
+    return redundant_init_files
+
+
 def check_all_init_files_tracked(python_folders: Set[Path]) -> bool:
     untracked_init_files: List[Path] = []
 
@@ -117,12 +159,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = ArgumentParser()
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--track", action="store_true")
+    parser.add_argument("--remove-redundant", action="store_true")
     parser.add_argument("--python-folders", dest="python_folders", required=True)
 
     parsed_args = parser.parse_args(argv)
 
     flag_create: bool = parsed_args.create or parsed_args.track  # track implies create
     flag_track: bool = parsed_args.track
+    flag_remove_redundant: bool = parsed_args.remove_redundant
     flag_python_folders: str = parsed_args.python_folders
 
     python_folders: Set[Path] = {
@@ -130,6 +174,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     }
 
     folders_with_tracked_files = get_folders_with_tracked_files()
+
+    redundant_init_files: Set[Path] = set()
+    if flag_remove_redundant:
+        redundant_init_files = remove_redundant_init_files(
+            folders_with_tracked_files, python_folders, flag_track
+        )
+        folders_with_tracked_files = {
+            folder for folder in folders_with_tracked_files if folder.exists()
+        }
 
     missing_init_files = find_missing_init_files(
         folders_with_tracked_files, python_folders
@@ -142,6 +195,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if missing_init_files:
         return 1
+
+    if redundant_init_files:
+        return 3
 
     if not check_all_init_files_tracked(python_folders):
         return 2
