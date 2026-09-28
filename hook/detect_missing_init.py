@@ -85,7 +85,7 @@ def is_redundant_init_file(init_path: Path, python_folders: Set[Path]) -> bool:
         and not any(
             file != init_path
             and (file.suffix == ".py" or file.is_dir())
-            and file.name != "__pycache__"
+            and file.name not in ("__pycache__", ".git")
             for file in init_path.parent.iterdir()
         )
     )

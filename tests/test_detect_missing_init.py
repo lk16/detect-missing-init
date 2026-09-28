@@ -162,6 +162,7 @@ def test_find_missing_init_files(
             {Path(".")},
             True,
         ),
+        ([Path("a/__init__.py"), Path("a/.git/HEAD")], {Path(".")}, True),
         ([Path("a/__init__.py"), Path("a/foo.py")], {Path(".")}, False),
         ([Path("a/__init__.py"), Path("a/b/foo.bar")], {Path(".")}, False),
     ],
