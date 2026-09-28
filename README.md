@@ -44,5 +44,6 @@ This hook prevents this issue.
 
 ### Run tests
 ```sh
-python -m py.test tests/ --cov=hook --cov-report term-missing
+uv sync
+uv run pytest tests/ --cov=hook --cov-report term-missing
 ```

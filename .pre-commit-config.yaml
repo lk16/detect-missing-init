@@ -37,7 +37,7 @@ repos:
       - id: mypy
         name: run mypy
         language: system
-        entry: poetry run mypy --strict --ignore-missing-imports
+        entry: uv run mypy --strict --ignore-missing-imports
         types: [python]
 
   - repo: https://github.com/lk16/detect-missing-init

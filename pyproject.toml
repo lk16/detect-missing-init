@@ -1,25 +1,27 @@
-[tool.poetry]
+[project]
 name = "detect-missing-init-files"
 version = "0.1.0"
 description = ""
-authors = ["Luuk Verweij <luuk_verweij@msn.com>"]
+authors = [{ name = "Luuk Verweij", email = "luuk_verweij@msn.com" }]
+requires-python = ">=3.12"
+dependencies = []
 
-packages = [
-    { include="hook", from="." },
-]
-
-[tool.poetry.dependencies]
-python = "^3.12"
-
-[tool.poetry.dev-dependencies]
-pytest = "^7.0.1"
-pytest-cov = "^3.0.0"
-pdbpp = "^0.10.3"
-mypy = "^0.961"
+[project.scripts]
+detect-missing-init = "hook.detect_missing_init:main"
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.12.0,<0.13"]
+build-backend = "uv_build"
 
-[tool.poetry.scripts]
-detect-missing-init = "hook.detect_missing_init:main"
+[tool.uv.build-backend]
+module-name = "hook"
+module-root = ""
+
+[dependency-groups]
+dev = [
+    "mypy>=2.3.1",
+    "pdbpp>=0.12.1",
+    "pre-commit>=4.6.2",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+]
